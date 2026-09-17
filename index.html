@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 魔方</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="logo" id="logoHome">🧊 3D 魔方 <span>Play</span></div>
+    <nav class="nav" id="mainNav">
+      <button data-view="home" class="active">首页</button>
+      <button data-view="play">三阶玩法</button>
+      <button data-view="timer">速拧计时器</button>
+      <button data-view="stats">成绩统计</button>
+      <button data-view="settings">设置</button>
+    </nav>
+  </header>
+
+  <!-- ===== 首页 ===== -->
+  <section class="view active" id="view-home">
+    <div class="hero">
+      <div class="glass hero-card">
+        <div class="emoji">▶️</div>
+        <h3>继续上次的魔方</h3>
+        <p id="continueInfo">没有进行中的对局</p>
+        <button class="btn primary big" id="btnContinue">继续游戏</button>
+      </div>
+      <div class="glass hero-card">
+        <div class="emoji">✨</div>
+        <h3>新建一局</h3>
+        <p>从一个还原完好的魔方开始</p>
+        <button class="btn teal big" id="btnNewGame">新建一局</button>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="glass stat-chip">
+        <div class="num" id="homePractice">0</div>
+        <div class="lbl">今日练习次数</div>
+      </div>
+      <div class="glass stat-chip">
+        <div class="num" id="homeBest">--</div>
+        <div class="lbl">最佳成绩</div>
+      </div>
+      <div class="glass stat-chip">
+        <div class="num" id="homeCount">0</div>
+        <div class="lbl">累计成绩条数</div>
+      </div>
+    </div>
+
+    <div class="glass" style="margin-bottom:20px">
+      <h2 class="title" style="font-size:16px">最近成绩</h2>
+      <ul class="recent-list" id="homeRecent"></ul>
+    </div>
+
+    <div class="cards">
+      <div class="glass module-card" data-view="play">
+        <div class="ico">🎲</div><h4>三阶玩法</h4>
+        <p>可拖动的 3D 魔方，转层、打乱、还原、计时与庆祝动画</p>
+      </div>
+      <div class="glass module-card" data-view="timer">
+        <div class="ico">⏱️</div><h4>速拧计时器</h4>
+        <p>空格键计时、防误触、标准打乱公式，成绩自动存本地</p>
+      </div>
+      <div class="glass module-card" data-view="stats">
+        <div class="ico">📈</div><h4>成绩统计</h4>
+        <p>最佳、平均与 ao5/ao12，趋势曲线看清进步</p>
+      </div>
+      <div class="glass module-card" data-view="settings">
+        <div class="ico">⚙️</div><h4>设置</h4>
+        <p>音效、手感调节，数据导出 / 导入 / 清空</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 三阶玩法 ===== -->
+  <section class="view" id="view-play">
+    <h2 class="title">三阶玩法</h2>
+    <div class="glass" id="playWrap">
+      <div id="threeError" class="glass">
+        <h3>3D 引擎加载失败</h3>
+        <p class="muted" style="margin:10px 0">Three.js 需要联网加载一次。请检查网络后重试。</p>
+        <button class="btn primary" onclick="location.reload()">重试加载</button>
+      </div>
+      <canvas id="cubeCanvas"></canvas>
+      <div class="play-hud">
+        <span class="hud-info">步数 <b id="playMoves">0</b></span>
+        <span class="hud-info">用时 <b id="playTime">0.0s</b></span>
+        <span class="hud-info" id="playStatus">拖动魔方的一层即可转动；拖动空白处旋转视角</span>
+        <span class="spacer"></span>
+        <button class="btn" id="btnScramble">打乱</button>
+        <button class="btn" id="btnResetCube">复原</button>
+        <button class="btn" id="btnSoundQuick">🔊 音效</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 速拧计时器 ===== -->
+  <section class="view" id="view-timer">
+    <h2 class="title">速拧计时器</h2>
+    <div class="glass timer-box">
+      <div class="muted" style="margin-bottom:8px">打乱公式</div>
+      <div id="scrambleText">点击「新打乱」开始</div>
+      <div id="timerDisplay">0.00</div>
+      <div id="timerHint">按住空格预热，松手开始计时；计时中按空格停止</div>
+      <div class="play-hud" style="justify-content:center">
+        <button class="btn" id="btnNewScramble">新打乱</button>
+        <button class="btn danger" id="btnGiveUp">放弃本把</button>
+      </div>
+      <div id="resultPanel" class="glass">
+        <h3 style="margin-bottom:4px">本把成绩</h3>
+        <div class="result-grid">
+          <div class="glass"><div class="num" id="resultTime">--</div><div class="lbl">用时</div></div>
+          <div class="glass" style="max-width:420px"><div class="num" id="resultScramble" style="font-size:13px;word-break:break-all">--</div><div class="lbl">打乱公式</div></div>
+        </div>
+        <button class="btn teal" id="btnSaveResult">保存成绩</button>
+        <button class="btn" id="btnDiscardResult">放弃</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 成绩统计 ===== -->
+  <section class="view" id="view-stats">
+    <h2 class="title">成绩统计</h2>
+    <div class="stat-row">
+      <div class="glass stat-chip"><div class="num" id="stBest">--</div><div class="lbl">最佳</div></div>
+      <div class="glass stat-chip"><div class="num" id="stMean">--</div><div class="lbl">平均</div></div>
+      <div class="glass stat-chip"><div class="num" id="stAo5">--</div><div class="lbl">ao5</div></div>
+      <div class="glass stat-chip"><div class="num" id="stAo12">--</div><div class="lbl">ao12</div></div>
+      <div class="glass stat-chip"><div class="num" id="stCount">0</div><div class="lbl">总条数</div></div>
+    </div>
+    <div class="glass" style="margin-bottom:18px">
+      <h2 class="title" style="font-size:16px">用时趋势（最近 50 条）</h2>
+      <canvas id="trendCanvas"></canvas>
+    </div>
+    <div class="glass">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2 class="title" style="font-size:16px">全部成绩</h2>
+        <button class="btn danger" id="btnClearRecords">清空成绩</button>
+      </div>
+      <div class="stat-list-wrap"><ul class="recent-list" id="statsList"></ul></div>
+    </div>
+  </section>
+
+  <!-- ===== 设置 ===== -->
+  <section class="view" id="view-settings">
+    <h2 class="title">设置</h2>
+    <div class="glass" style="margin-bottom:18px">
+      <div class="setting-row">
+        <div class="info"><h4>音效</h4><p>转层与完成时的提示音</p></div>
+        <label class="switch"><input type="checkbox" id="setSound"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="info"><h4>转层动画速度</h4><p>数值越大，转层动画越快</p></div>
+        <input type="range" id="setAnimSpeed" min="0.5" max="2.5" step="0.25">
+      </div>
+      <div class="setting-row">
+        <div class="info"><h4>拖动灵敏度</h4><p>数值越大，越轻的拖动就能触发转层</p></div>
+        <input type="range" id="setSensitivity" min="0.5" max="2" step="0.25">
+      </div>
+    </div>
+    <div class="glass">
+      <div class="setting-row">
+        <div class="info"><h4>导出数据</h4><p>把全部本地数据（进度、成绩、设置）保存为 JSON 文件</p></div>
+        <button class="btn teal" id="btnExport">导出</button>
+      </div>
+      <div class="setting-row">
+        <div class="info"><h4>导入数据</h4><p>从导出的 JSON 文件恢复（将覆盖现有数据）</p></div>
+        <button class="btn" id="btnImport">导入</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      </div>
+      <div class="setting-row">
+        <div class="info"><h4>清空全部数据</h4><p>删除本机保存的所有数据，恢复到首次使用状态</p></div>
+        <button class="btn danger" id="btnClearAll">清空全部</button>
+      </div>
+      <p class="muted" id="dataMeta" style="margin-top:10px"></p>
+    </div>
+  </section>
+</div>
+
+<div id="celebrate"><div class="msg">🎉 还原成功！</div></div>
+<div id="toast"></div>
+
+<!-- 数据层 / 纯逻辑（不依赖 DOM，可被 Node 测试复用） -->
+<script src="js/data-layer.js"></script>
+<script src="js/cube-core.js"></script>
+<script src="js/stats-core.js"></script>
+<!-- 3D 引擎：CDN，首次需联网；失败时提示重试 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        onerror="window.__threeFailed=true"></script>
+<script src="js/cube3d.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
+
+# 本地备份/临时文件
+*.tmp
+*.bak
+*.log
