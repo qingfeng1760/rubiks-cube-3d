@@ -194,7 +194,27 @@ input[type="range"] { accent-color: var(--accent); width: 180px; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #toast.err { border-color: rgba(255,93,122,.6); color: #ffb3c0; }
 
+#cubeCanvas { height: min(60vh, 500px); }
+
 @media (max-width: 640px) {
-  #timerDisplay { font-size: 52px; }
-  #cubeCanvas { height: 360px; }
+  #app { padding: 12px 12px 48px; }
+  .topbar { flex-direction: column; gap: 8px; padding: 10px 12px; }
+  .nav { justify-content: center; }
+  .nav button { padding: 7px 10px; font-size: 13px; }
+  .hero-card { padding: 20px 14px; }
+  .hero-card h3 { font-size: 17px; }
+  .btn.big { font-size: 16px; padding: 13px 22px; }
+  #timerDisplay { font-size: clamp(44px, 13vw, 64px); }
+  #scrambleText { font-size: 14px; padding: 10px 12px; }
+  .stat-chip .num { font-size: 21px; }
+  .turn-grid .btn.turn { min-width: 48px; padding: 7px 0; }
+  .turn-tip { display: none; }
+  #cubeCanvas { height: min(58vh, 440px); }
+}
+
+/* 矮横屏（如手机横持）：压缩顶栏与计时字号 */
+@media (orientation: landscape) and (max-height: 560px) {
+  .topbar { padding: 6px 14px; margin-bottom: 10px; }
+  #timerDisplay { font-size: 48px; margin: 8px 0 4px; }
+  #cubeCanvas { height: 62vh; }
 }

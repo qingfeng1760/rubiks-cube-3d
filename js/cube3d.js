@@ -53,6 +53,11 @@
     this._bindPointer();
     this._resize();
     window.addEventListener('resize', function () { self._resize(); });
+    // 容器尺寸随视口/布局变化时（竖横屏切换）自适应
+    if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(function () { self._resize(); });
+      this._ro.observe(canvas);
+    }
 
     var last = performance.now();
     this._lastTickAt = last;
