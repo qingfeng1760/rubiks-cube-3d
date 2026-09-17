@@ -43,4 +43,17 @@ module.exports = (t) => {
     assert.ok(/new DataLayer/.test(src), 'app.js 应实例化 DataLayer');
     assert.ok(!/JSON\.(parse|stringify)/.test(src), 'app.js 不应自行序列化数据');
   });
+
+  t('转层按钮面板完整（12 个外层动作）', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const moves = ['U', "U'", 'D', "D'", 'L', "L'", 'R', "R'", 'F', "F'", 'B', "B'"];
+    moves.forEach(m => {
+      const re = new RegExp('data-move="' + m + '"');
+      assert.ok(re.test(html), '缺少转层按钮 ' + m);
+    });
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/turnPad/.test(app), 'app.js 应绑定转层按钮');
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/cubeGroup\.add\(this\.pivot\)/.test(c3), 'pivot 必须挂在 cubeGroup 下（视角旋转修复）');
+  });
 };

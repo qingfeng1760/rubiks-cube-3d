@@ -46,8 +46,10 @@
 
     this.cubeGroup = new THREE.Group();
     this.scene.add(this.cubeGroup);
+    // pivot 必须是 cubeGroup 的子节点：转层绕魔方本地轴旋转，
+    // 与视角旋转（cubeGroup 自身旋转）互不干扰
     this.pivot = new THREE.Group();
-    this.scene.add(this.pivot);
+    this.cubeGroup.add(this.pivot);
 
     // 27 个 cubie（含内部不可见块，简化处理）
     var geo = new THREE.BoxGeometry(0.96, 0.96, 0.96);
@@ -127,7 +129,8 @@
       axis: info.axis, layer: info.layer,
       dir: info.turns === 3 ? -1 : 1,              // 3 个顺时针 = 1 个逆时针
       angle: info.turns === 2 ? Math.PI : Math.PI / 2,
-      move: moveStr, silent: !!(opts && opts.silent)
+      move: moveStr, silent: !!(opts && opts.silent),
+      user: !!(opts && opts.user)
     });
   };
 
@@ -162,7 +165,7 @@
     this.pivot.rotation.set(0, 0, 0);
     this.turning = null;
     if (t.user) {
-      this.onUserMove(t.move);   // 用户拖出的动作：由应用写入逻辑状态
+      this.onUserMove(t.move);   // 用户操作（拖拽/按钮）的动作：由应用写入逻辑状态
     } else {
       this.onTurnDone(t.move, t.silent); // 打乱等程序动画
     }
@@ -234,15 +237,19 @@
       if (self.mode !== 'pending') return;
       var sens = (self.dragSensitivity || 1);
       if (Math.sqrt(dx * dx + dy * dy) < 12 / sens) return;
-      // 把拖动方向投到贴纸所在平面，求旋转轴
+      // 把拖动方向投到贴纸所在平面（世界空间），求旋转轴
       var p = ndc(e);
       raycaster.setFromCamera(p, self.camera);
-      var plane = new THREE.Plane(down.normal, -down.normal.dot(down.point));
+      // 贴纸法向是魔方本地坐标，换算到世界空间求平面
+      var worldNormal = down.normal.clone().applyQuaternion(self.cubeGroup.quaternion);
+      var plane = new THREE.Plane(worldNormal, -worldNormal.dot(down.point));
       var hit = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(plane, hit)) { self.mode = 'idle'; down = null; return; }
-      var delta = hit.clone().sub(down.point);
-      if (delta.length() < 0.05) return;
-      var axisV = new THREE.Vector3().crossVectors(down.normal, delta);
+      // 旋转轴在魔方本地坐标系中计算（与 pivot 的本地旋转一致），视角旋转不影响结果
+      var deltaCube = hit.clone().sub(down.point)
+        .applyQuaternion(self.cubeGroup.quaternion.clone().invert());
+      if (deltaCube.length() < 0.05) return;
+      var axisV = new THREE.Vector3().crossVectors(down.normal, deltaCube);
       // 取主导分量作为旋转轴
       var ax = 'x', best = Math.abs(axisV.x);
       if (Math.abs(axisV.y) > best) { ax = 'y'; best = Math.abs(axisV.y); }

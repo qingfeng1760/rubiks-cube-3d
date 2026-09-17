@@ -248,6 +248,13 @@
     toast(dl.getSettings().sound ? '音效已开启' : '音效已关闭');
   });
 
+  // 转层按钮：等同用户动作，写入逻辑状态
+  document.getElementById('turnPad').addEventListener('click', function (e) {
+    var move = e.target.dataset && e.target.dataset.move;
+    if (!move || !cube3d || cube3d.isBusy()) return;
+    cube3d.enqueueMove(move, { user: true });
+  });
+
   /* ---------------- 速拧计时器 ---------------- */
   var timer = { state: 'idle', scramble: null, holdStart: 0, startAt: 0, result: null };
   var HOLD_MS = 300; // 防误触：按住不足 300ms 不开表

@@ -110,6 +110,13 @@ h2.title { font-size: 20px; margin-bottom: 16px; }
 .hud-info b { color: var(--text); font-variant-numeric: tabular-nums; }
 #threeError { display: none; padding: 60px 20px; text-align: center; }
 
+/* 转层按钮 */
+.turn-pad { display: flex; gap: 18px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
+.turn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.turn-grid .btn.turn { padding: 8px 0; min-width: 56px; font-family: Consolas, monospace; font-weight: 700; }
+.turn-col { display: flex; flex-direction: column; gap: 6px; }
+.turn-tip { align-self: center; max-width: 200px; line-height: 1.6; }
+
 /* 庆祝动画 */
 #celebrate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 50; pointer-events: none; }
 #celebrate.show { display: flex; }
