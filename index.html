@@ -88,6 +88,14 @@
       </div>
       <canvas id="cubeCanvas"></canvas>
       <div class="play-hud">
+        <span class="hud-info">阶数
+          <select id="orderSelect" class="order-select">
+            <option value="2">2×2</option>
+            <option value="3" selected>3×3</option>
+            <option value="4">4×4</option>
+            <option value="5">5×5</option>
+          </select>
+        </span>
         <span class="hud-info">步数 <b id="playMoves">0</b></span>
         <span class="hud-info">用时 <b id="playTime">0.0s</b></span>
         <span class="hud-info" id="playStatus">拖动魔方的一层即可转动；拖动空白处旋转视角</span>

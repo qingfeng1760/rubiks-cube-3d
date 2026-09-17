@@ -1,20 +1,15 @@
-/* 3D 魔方渲染与交互（依赖全局 THREE 与 CubeCore）。
- * 思路：27 个 cubie 网格放在一个 group 里；转层时把该层 cubie 挂到 pivot
- * 做补间旋转，结束后复位所有 cubie 变换，并按最新 facelets 重建贴纸颜色
- * （cubie 都是同款方块，视觉上等价于真实排列交换）。 */
+/* 3D 魔方渲染与交互（依赖全局 THREE 与 CubeCore），支持 2~5 阶。
+ * 思路：N³ 个 cubie 网格放在 cubeGroup 里；转层时把该层 cubie 挂到
+ * pivot（cubeGroup 的子节点）做补间旋转，结束后复位所有 cubie 变换，
+ * 并按最新 facelets 重建贴纸颜色（cubie 同款，视觉等价于真实排列交换）。
+ * 视角旋转作用于 cubeGroup 自身，与转层互不干扰。 */
 (function (root) {
   'use strict';
 
   var COLORS = { U: 0xf5f6fa, R: 0xe8443a, F: 0x2ecc71, D: 0xf7d716, L: 0xf28c1c, B: 0x2f7ef7 };
   var INNER = 0x14162b;
 
-  // 面贴索引查找表：'x,y,z|nx,ny,nz' -> facelet index
-  var IDX = {};
-  CubeCore.DEFS.forEach(function (d, i) {
-    IDX[d.pos.join(',') + '|' + d.normal.join(',')] = i;
-  });
-  // 面法向量 -> 材质槽位（BoxGeometry 材质顺序 +x,-x,+y,-y,+z,-z）
-  var SLOT = { '1,0,0': 0, '-1,0,0': 1, '0,1,0': 2, '0,-1,0': 3, '0,0,1': 4, '0,0,-1': 5 };
+  // 材质槽位（BoxGeometry 材质顺序 +x,-x,+y,-y,+z,-z）→ 面字母与外法向符号
   var FACE_OF_SLOT = ['R', 'L', 'U', 'D', 'F', 'B'];
   var AXIS_VEC = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 
@@ -23,9 +18,10 @@
     opts = opts || {};
     var self = this;
     this.canvas = canvas;
-    this.facelets = CubeCore.SOLVED;
-    this.onUserMove = opts.onUserMove || function () {};   // 用户拖出一步后回调(moveStr)
-    this.onTurnDone = opts.onTurnDone || function () {};   // 每次转层动画完成回调
+    this.N = Math.min(5, Math.max(2, opts.order || 3));
+    this.facelets = CubeCore.solvedState(this.N);
+    this.onUserMove = opts.onUserMove || function () {};   // 用户操作（拖拽/按钮）回调
+    this.onTurnDone = opts.onTurnDone || function () {};   // 程序动画（打乱等）回调
     this.animSpeed = opts.animSpeed || 1;
 
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
@@ -33,8 +29,6 @@
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    this.camera.position.set(4.4, 4.6, 5.6);
-    this.camera.lookAt(0, 0, 0);
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     var dl = new THREE.DirectionalLight(0xffffff, 0.75);
@@ -51,19 +45,7 @@
     this.pivot = new THREE.Group();
     this.cubeGroup.add(this.pivot);
 
-    // 27 个 cubie（含内部不可见块，简化处理）
-    var geo = new THREE.BoxGeometry(0.96, 0.96, 0.96);
-    this.cubies = [];
-    for (var x = -1; x <= 1; x++) for (var y = -1; y <= 1; y++) for (var z = -1; z <= 1; z++) {
-      var mats = [];
-      for (var s = 0; s < 6; s++) mats.push(new THREE.MeshLambertMaterial({ color: INNER }));
-      var mesh = new THREE.Mesh(geo, mats);
-      mesh.userData.grid = [x, y, z];
-      mesh.position.set(x, y, z);
-      this.cubies.push(mesh);
-      this.cubeGroup.add(mesh);
-    }
-    this._rebuildMaterials();
+    this._buildCubies();
 
     this.turnQueue = [];
     this.turning = null;
@@ -89,32 +71,88 @@
     }, 80);
   }
 
+  /* 相机距离：随阶数增大、竖屏（aspect<1）拉远 */
+  Cube3D.prototype._cameraDist = function () {
+    var w = this.canvas.clientWidth || 600, h = this.canvas.clientHeight || 480;
+    var aspect = w / h;
+    var nFactor = (this.N + 1.5) / 4.5;          // N=3 → 1
+    var aspectFactor = Math.max(1, 1.15 / Math.min(aspect, 1.6));
+    return 8.4 * nFactor * aspectFactor;
+  };
+
+  Cube3D.prototype._placeCamera = function () {
+    var d = this._cameraDist();
+    var dir = new THREE.Vector3(4.4, 4.6, 5.6).normalize();
+    this.camera.position.copy(dir.multiplyScalar(d));
+    this.camera.lookAt(0, 0, 0);
+  };
+
+  Cube3D.prototype._buildCubies = function () {
+    var self = this;
+    var N = this.N;
+    this.idxMap = CubeCore.faceletIndexMap(N);
+    if (this.geometry) this.geometry.dispose();
+    this.geometry = new THREE.BoxGeometry(0.94, 0.94, 0.94);
+    // 释放旧 cubie
+    (this.cubies || []).forEach(function (c) { self.cubeGroup.remove(c); });
+    this.cubies = [];
+    var coords = [];
+    for (var i = 0; i < N; i++) coords.push(2 * i - (N - 1)); // 缩放整数坐标
+    coords.forEach(function (x) {
+      coords.forEach(function (y) {
+        coords.forEach(function (z) {
+          var mats = [];
+          for (var s = 0; s < 6; s++) mats.push(new THREE.MeshLambertMaterial({ color: INNER }));
+          var mesh = new THREE.Mesh(self.geometry, mats);
+          mesh.userData.grid = [x, y, z];
+          mesh.position.set(x / 2, y / 2, z / 2); // 世界步长 1
+          self.cubies.push(mesh);
+          self.cubeGroup.add(mesh);
+        });
+      });
+    });
+    this._rebuildMaterials();
+    this._placeCamera();
+  };
+
+  /* 切换阶数：重建方块组，状态清为该阶还原态 */
+  Cube3D.prototype.setOrder = function (N) {
+    N = Math.min(5, Math.max(2, N | 0));
+    if (N === this.N && this.cubies && this.cubies.length) return;
+    this.N = N;
+    this.facelets = CubeCore.solvedState(N);
+    this.cubeGroup.rotation.set(0, 0, 0);
+    this.turnQueue = [];
+    this._buildCubies();
+    this._resize();
+  };
+
   Cube3D.prototype._resize = function () {
     var w = this.canvas.clientWidth || 600, h = this.canvas.clientHeight || 480;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this._placeCamera();
   };
 
   Cube3D.prototype.setFacelets = function (f) {
+    if (f.length !== 6 * this.N * this.N) return; // 阶数不符的存档直接忽略
     this.facelets = f;
     this._rebuildMaterials();
   };
 
   Cube3D.prototype._rebuildMaterials = function () {
-    var f = this.facelets;
+    var f = this.facelets, N = this.N, m = N - 1;
+    var self = this;
     this.cubies.forEach(function (c) {
       var g = c.userData.grid;
       for (var s = 0; s < 6; s++) {
-        var n = FACE_OF_SLOT[s];
-        // 面法向量方向修正：L/D/B 的外法向是负轴
-        var sign = (n === 'R' || n === 'U' || n === 'F') ? 1 : -1;
-        var axisIdx = n === 'x' || n === 'R' || n === 'L' ? 0 : (n === 'y' || n === 'U' || n === 'D' ? 1 : 2);
+        var face = FACE_OF_SLOT[s];
+        var sign = (face === 'R' || face === 'U' || face === 'F') ? 1 : -1;
+        var axisIdx = face === 'R' || face === 'L' ? 0 : (face === 'U' || face === 'D' ? 1 : 2);
+        if (g[axisIdx] !== sign * m) { c.material[s].color.setHex(INNER); continue; }
         var normal = [0, 0, 0]; normal[axisIdx] = sign;
-        var p = [g[0], g[1], g[2]];
-        // 只有位于该面表层的 cubie 才有贴纸
-        if (p[axisIdx] !== sign) { c.material[s].color.setHex(INNER); continue; }
-        var idx = IDX[p.join(',') + '|' + normal.join(',')];
+        var idx = self.idxMap[g.join(',') + '|' + normal.join(',')];
         if (idx === undefined) { c.material[s].color.setHex(INNER); continue; }
         c.material[s].color.setHex(COLORS[f[idx]] || INNER);
       }
@@ -122,9 +160,9 @@
   };
 
   /* ---- 转层队列 ---- */
-  // moveStr 如 "R'"；opts.silent 时不回调 onUserMove
+  // moveStr 如 "R'"、"2R"；opts.silent 时不回调 onTurnDone，opts.user 走 onUserMove
   Cube3D.prototype.enqueueMove = function (moveStr, opts) {
-    var info = CubeCore.moveInfo(moveStr);
+    var info = CubeCore.moveInfo(moveStr, this.N);
     this.turnQueue.push({
       axis: info.axis, layer: info.layer,
       dir: info.turns === 3 ? -1 : 1,              // 3 个顺时针 = 1 个逆时针
@@ -159,7 +197,7 @@
     this.cubies.forEach(function (c) {
       self.cubeGroup.attach(c);
       var g = c.userData.grid;
-      c.position.set(g[0], g[1], g[2]);
+      c.position.set(g[0] / 2, g[1] / 2, g[2] / 2);
       c.rotation.set(0, 0, 0);
     });
     this.pivot.rotation.set(0, 0, 0);
@@ -211,7 +249,7 @@
       var hits = raycaster.intersectObjects(self.cubies);
       if (hits.length) {
         var h = hits[0];
-        var n = h.face.normal.clone(); // cubie 无旋转，局部法向 = 世界法向
+        var n = h.face.normal.clone(); // cubie 无自转，本地法向即魔方本地法向
         down = {
           x: e.clientX, y: e.clientY,
           grid: h.object.userData.grid.slice(),
@@ -259,9 +297,8 @@
       var axisIdx = ax === 'x' ? 0 : ax === 'y' ? 1 : 2;
       var layer = down.grid[axisIdx];
       down = null;
-      if (layer === 0) { self.mode = 'idle'; return; } // 中层拖动不做转层
       self.mode = 'turning';
-      var move = Cube3D.dragToMove(ax, layer, dir);
+      var move = CubeCore.dragToMove(ax, layer, dir, self.N);
       self.turnQueue.push({ axis: ax, layer: layer, dir: dir, angle: Math.PI / 2, move: move, silent: false, user: true });
     });
 
@@ -271,16 +308,6 @@
     }
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', up);
-  };
-
-  /* 拖动 → 动作名：dir 为绕 +axis 的旋转方向（+1 = 逆时针 90°） */
-  Cube3D.dragToMove = function (axis, layer, dir) {
-    var face;
-    if (axis === 'y') face = layer > 0 ? 'U' : 'D';
-    else if (axis === 'x') face = layer > 0 ? 'R' : 'L';
-    else face = layer > 0 ? 'F' : 'B';
-    var prime = (layer > 0) === (dir > 0); // +90 绕 +axis：正层=逆时针(')，负层=顺时针
-    return prime ? face + "'" : face;
   };
 
   /* 应用设置 */

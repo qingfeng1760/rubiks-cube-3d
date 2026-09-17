@@ -44,6 +44,21 @@ module.exports = (t) => {
     assert.ok(!/JSON\.(parse|stringify)/.test(src), 'app.js 不应自行序列化数据');
   });
 
+  t('高阶支持：阶数选择器与 N 阶 API 就绪', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.ok(/id="orderSelect"/.test(html), '缺少阶数选择器');
+    ['2', '3', '4', '5'].forEach(v => {
+      assert.ok(new RegExp('value="' + v + '"').test(html), '缺少 ' + v + ' 阶选项');
+    });
+    const core = fs.readFileSync(path.join(root, 'js', 'cube-core.js'), 'utf8');
+    ['solvedState', 'orderOf', 'dragToMove', 'faceletIndexMap'].forEach(fn =>
+      assert.ok(core.includes(fn), 'cube-core 缺少 ' + fn));
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/setOrder/.test(c3) && /faceletIndexMap/.test(c3), 'cube3d 应支持切换阶数');
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/orderSelect/.test(app) && /play\.order/.test(app), 'app.js 应接入阶数状态');
+  });
+
   t('转层按钮面板完整（12 个外层动作）', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const moves = ['U', "U'", 'D', "D'", 'L', "L'", 'R', "R'", 'F', "F'", 'B', "B'"];

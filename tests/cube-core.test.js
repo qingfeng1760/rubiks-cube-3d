@@ -99,13 +99,20 @@ module.exports = (t) => {
     assert.ok(Cube.isSolved(applySeq(inv, applySeq(sc.moves))));
   });
 
-  t('moveInfo 解析轴/层/圈数', () => {
-    assert.deepStrictEqual(Cube.moveInfo('U'), { axis: 'y', layer: 1, turns: 1 });
-    assert.deepStrictEqual(Cube.moveInfo("U'"), { axis: 'y', layer: 1, turns: 3 });
-    assert.deepStrictEqual(Cube.moveInfo('D2'), { axis: 'y', layer: -1, turns: 2 });
-    assert.deepStrictEqual(Cube.moveInfo('R'), { axis: 'x', layer: 1, turns: 1 });
-    assert.deepStrictEqual(Cube.moveInfo("L'"), { axis: 'x', layer: -1, turns: 3 });
-    assert.deepStrictEqual(Cube.moveInfo('F2'), { axis: 'z', layer: 1, turns: 2 });
-    assert.throws(() => Cube.moveInfo('X'));
+  t('moveInfo 解析轴/层/圈数（N=3 坐标：外层 ±2，中层 0）', () => {
+    const info = mv => Cube.moveInfo(mv, 3);
+    assert.deepStrictEqual(
+      { axis: info('U').axis, layer: info('U').layer, turns: info('U').turns },
+      { axis: 'y', layer: 2, turns: 1 });
+    assert.deepStrictEqual(
+      { axis: info("U'").axis, layer: info("U'").layer, turns: info("U'").turns },
+      { axis: 'y', layer: 2, turns: 3 });
+    assert.deepStrictEqual(
+      { axis: info('D2').axis, layer: info('D2').layer, turns: info('D2').turns },
+      { axis: 'y', layer: -2, turns: 2 });
+    assert.strictEqual(info('R').layer, 2);
+    assert.strictEqual(info("L'").layer, -2);
+    assert.strictEqual(info('F2').axis, 'z');
+    assert.throws(() => Cube.moveInfo('X', 3));
   });
 };

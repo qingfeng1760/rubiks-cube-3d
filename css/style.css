@@ -106,6 +106,12 @@ h2.title { font-size: 20px; margin-bottom: 16px; }
 #cubeCanvas:active { cursor: grabbing; }
 .play-hud { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
 .play-hud .spacer { flex: 1; }
+.order-select {
+  background: rgba(255,255,255,.1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: 8px;
+  padding: 3px 6px; font-size: 13px;
+}
+.order-select option { background: #1a1040; color: var(--text); }
 .hud-info { font-size: 14px; color: var(--muted); }
 .hud-info b { color: var(--text); font-variant-numeric: tabular-nums; }
 #threeError { display: none; padding: 60px 20px; text-align: center; }
