@@ -6,7 +6,13 @@
   const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
   const R = {};
   const errors = [];
+  const diag = {};
   window.addEventListener('error', (e) => errors.push('window.onerror: ' + e.message));
+  const pumpUntilIdle = (c3, cap) => {
+    let i = 0;
+    while (i < cap && c3.isBusy()) { c3._tick(200); i++; }
+    return i;
+  };
 
   try {
     // 进入玩法页（3D 实例在此创建）
@@ -34,10 +40,22 @@
     R['步数已累加'] = parseInt(document.getElementById('playMoves').textContent, 10) === moves0 + 1;
     R['贴纸状态已更新'] = c3.facelets !== fl0;
 
-    // 打乱（程序动画队列）
+    // 打乱（程序动画队列）——带诊断，失败时能看出卡在哪一步
+    pumpUntilIdle(c3, 200);
+    const status0 = document.getElementById('playStatus').textContent;
     document.getElementById('btnScramble').click();
-    for (let i = 0; i < 60 && c3.isBusy(); i++) c3._tick(200);
-    R['打乱完成'] = !c3.isBusy() && document.getElementById('playStatus').textContent.indexOf('已打乱') === 0;
+    const queueAfterClick = c3.turnQueue.length;
+    const statusAfterClick = document.getElementById('playStatus').textContent;
+    const scrambleTicks = pumpUntilIdle(c3, 400);
+    diag.scramble = {
+      阶数: c3.N, 动画速度: c3.animSpeed,
+      点击前状态: status0,
+      点击后队列长度: queueAfterClick, 点击后状态: statusAfterClick,
+      泵帧次数: scrambleTicks, 剩余队列: c3.turnQueue.length,
+      结束后仍在忙: c3.isBusy(),
+      结束后状态: document.getElementById('playStatus').textContent
+    };
+    R['打乱完成'] = !c3.isBusy() && diag.scramble.结束后状态.indexOf('已打乱') === 0;
 
     // 视角按钮与复位
     const q0 = c3.orientation.slice();
@@ -94,13 +112,16 @@
 
     R['无 JS 报错'] = errors.length === 0;
     const ok = Object.keys(R).every((k) => R[k] === true);
-    await invoke('smoke_report', { ok: ok, json: JSON.stringify({ ok: ok, checks: R, errors: errors }, null, 2) });
+    await invoke('smoke_report', {
+      ok: ok,
+      json: JSON.stringify({ ok: ok, checks: R, errors: errors, diag: diag }, null, 2)
+    });
   } catch (e) {
     const msg = String((e && e.stack) || e);
     try {
       await invoke('smoke_report', {
         ok: false,
-        json: JSON.stringify({ ok: false, checks: R, errors: errors.concat([msg]) }, null, 2)
+        json: JSON.stringify({ ok: false, checks: R, errors: errors.concat([msg]), diag: diag }, null, 2)
       });
     } catch (e2) { /* 退出流程中，忽略 */ }
   }

@@ -36,7 +36,8 @@ fn smoke_shot(data_url: String) {
 
 fn main() {
     let smoke = std::env::args().any(|a| a == "--smoke");
-    let data_dir = exe_dir().join("data");
+    // 自检用独立的 WebView2 数据目录，绝不污染用户的真实存档（成绩/进度/设置）
+    let data_dir = exe_dir().join(if smoke { "data-smoke" } else { "data" });
     let _ = fs::create_dir_all(&data_dir);
     // 便携数据双保险：环境变量 + builder 的 data_directory
     std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &data_dir);
