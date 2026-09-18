@@ -1,0 +1,19 @@
+[package]
+name = "rubik3d"
+version = "1.0.0"
+description = "3D 魔方桌面版（Tauri 壳，网页资源内嵌）"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+base64 = "0.22"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

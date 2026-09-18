@@ -10,6 +10,13 @@ desktop.ini
 # 工具产物
 .zcode/
 
+# 打包产物与构建缓存
+dist/
+node_modules/
+src-tauri/target/
+src-tauri/webdist/
+src-tauri/gen/
+
 # 本地备份/临时文件
 *.tmp
 *.bak

@@ -232,9 +232,8 @@
 <script src="js/data-layer.js"></script>
 <script src="js/cube-core.js"></script>
 <script src="js/stats-core.js"></script>
-<!-- 3D 引擎：CDN，首次需联网；失败时提示重试 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
-        onerror="window.__threeFailed=true"></script>
+<!-- 3D 引擎：本地内置（离线可用）；加载失败时提示重试 -->
+<script src="js/vendor/three.min.js" onerror="window.__threeFailed=true"></script>
 <script src="js/cube3d.js"></script>
 <script src="js/app.js"></script>
 </body>
