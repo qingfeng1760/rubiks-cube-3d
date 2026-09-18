@@ -59,6 +59,12 @@ module.exports = (t) => {
     assert.ok(/orderSelect/.test(app) && /play\.order/.test(app), 'app.js 应接入阶数状态');
   });
 
+  t('计时器打乱固定 3 阶（scramble 参数语义回归）', () => {
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/Cube\.scramble\(3\)/.test(app), '计时器应调用 Cube.scramble(3)');
+    assert.ok(!/Cube\.scramble\(20\)/.test(app), '不得再把 20 当阶数传入 scramble');
+  });
+
   t('转层按钮面板完整（12 个外层动作）', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const moves = ['U', "U'", 'D', "D'", 'L', "L'", 'R', "R'", 'F', "F'", 'B', "B'"];

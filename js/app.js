@@ -291,7 +291,7 @@
     renderTimer();
   }
   function newScramble() {
-    timer.scramble = Cube.scramble(20);
+    timer.scramble = Cube.scramble(3); // 计时器固定 3 阶标准打乱
     timer.state = 'idle';
     timer.result = null;
     document.getElementById('scrambleText').textContent = timer.scramble.text;
