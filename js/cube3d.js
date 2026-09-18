@@ -2,12 +2,40 @@
  * 思路：N³ 个 cubie 网格放在 cubeGroup 里；转层时把该层 cubie 挂到
  * pivot（cubeGroup 的子节点）做补间旋转，结束后复位所有 cubie 变换，
  * 并按最新 facelets 重建贴纸颜色（cubie 同款，视觉等价于真实排列交换）。
- * 视角旋转作用于 cubeGroup 自身，与转层互不干扰。 */
+ * 视角旋转用屏幕空间轨道（四元数左乘，见 orbitQuat）：旋转轴只由屏幕
+ * 方向决定，与魔方当前姿态无关，任意姿态下拖动方向始终与手一致。 */
 (function (root) {
   'use strict';
 
   var COLORS = { U: 0xf5f6fa, R: 0xe8443a, F: 0x2ecc71, D: 0xf7d716, L: 0xf28c1c, B: 0x2f7ef7 };
   var INNER = 0x14162b;
+
+  /* ---- 纯四元数工具（[x, y, z, w]，不依赖 THREE，Node 可直接测） ---- */
+  function quatAxisAngle(ax, ay, az, angle) {
+    var s = Math.sin(angle / 2);
+    return [ax * s, ay * s, az * s, Math.cos(angle / 2)];
+  }
+  /* a*b：先应用 b，再应用 a */
+  function quatMul(a, b) {
+    return [
+      a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+      a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+      a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+      a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]
+    ];
+  }
+  function quatNormalize(q) {
+    var l = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]) || 1;
+    return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
+  }
+  /* 屏幕空间轨道旋转：camUp/camRight 为屏幕上/右方向的世界系单位向量。
+   * dx 向右为正（绕 camUp），dy 向下为正（绕 camRight）。左乘（世界系）
+   * 保证旋转轴只由屏幕方向决定，与魔方当前姿态无关。 */
+  function orbitQuat(q, dxRad, dyRad, camRight, camUp) {
+    var qy = quatAxisAngle(camUp[0], camUp[1], camUp[2], dxRad);
+    var qx = quatAxisAngle(camRight[0], camRight[1], camRight[2], dyRad);
+    return quatNormalize(quatMul(quatMul(qx, qy), q));
+  }
 
   // 材质槽位（BoxGeometry 材质顺序 +x,-x,+y,-y,+z,-z）→ 面字母与外法向符号
   var FACE_OF_SLOT = ['R', 'L', 'U', 'D', 'F', 'B'];
@@ -40,6 +68,8 @@
 
     this.cubeGroup = new THREE.Group();
     this.scene.add(this.cubeGroup);
+    // 视角姿态：单位四元数 [x, y, z, w]（屏幕空间轨道旋转，见 orbitQuat）
+    this.orientation = [0, 0, 0, 1];
     // pivot 必须是 cubeGroup 的子节点：转层绕魔方本地轴旋转，
     // 与视角旋转（cubeGroup 自身旋转）互不干扰
     this.pivot = new THREE.Group();
@@ -90,6 +120,32 @@
     var dir = new THREE.Vector3(4.4, 4.6, 5.6).normalize();
     this.camera.position.copy(dir.multiplyScalar(d));
     this.camera.lookAt(0, 0, 0);
+    this._updateCamAxes();
+  };
+
+  /* 相机固定朝向原点：屏幕上/右方向轴在放好相机后算出，供轨道旋转用 */
+  Cube3D.prototype._updateCamAxes = function () {
+    var up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    var right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    this.camUp = [up.x, up.y, up.z];
+    this.camRight = [right.x, right.y, right.z];
+  };
+
+  /* 屏幕空间轨道旋转：dx/dy 为弧度（右/下为正），旋转轴只取决于屏幕方向 */
+  Cube3D.prototype._applyOrbit = function (dxRad, dyRad) {
+    this.orientation = orbitQuat(this.orientation, dxRad, dyRad, this.camRight, this.camUp);
+    this.cubeGroup.quaternion.set(
+      this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3]
+    );
+  };
+
+  /* 视角按钮/复位：与拖拽旋转同一套屏幕空间逻辑 */
+  Cube3D.prototype.orbitView = function (dxRad, dyRad) {
+    this._applyOrbit(dxRad || 0, dyRad || 0);
+  };
+  Cube3D.prototype.resetView = function () {
+    this.orientation = [0, 0, 0, 1];
+    this.cubeGroup.quaternion.set(0, 0, 0, 1);
   };
 
   Cube3D.prototype._buildCubies = function () {
@@ -126,7 +182,7 @@
     if (N === this.N && this.cubies && this.cubies.length) return;
     this.N = N;
     this.facelets = CubeCore.solvedState(N);
-    this.cubeGroup.rotation.set(0, 0, 0);
+    this.resetView();
     this.turnQueue = [];
     this._buildCubies();
     this._resize();
@@ -272,8 +328,7 @@
       if (!down) return;
       var dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (self.mode === 'orbit') {
-        self.cubeGroup.rotation.y += dx * 0.008;
-        self.cubeGroup.rotation.x += dy * 0.008;
+        self._applyOrbit(dx * 0.008, dy * 0.008);
         down.x = e.clientX; down.y = e.clientY;
         return;
       }
@@ -319,5 +374,14 @@
   Cube3D.prototype.setAnimSpeed = function (v) { this.animSpeed = v || 1; };
   Cube3D.prototype.setSensitivity = function (v) { this.dragSensitivity = v || 1; };
 
-  root.Cube3D = Cube3D;
+  /* UMD：浏览器挂 window.Cube3D，Node 导出构造器与纯函数供测试 */
+  Cube3D.orbitQuat = orbitQuat;
+  Cube3D.quatAxisAngle = quatAxisAngle;
+  Cube3D.quatMul = quatMul;
+  Cube3D.quatNormalize = quatNormalize;
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Cube3D;
+  } else {
+    root.Cube3D = Cube3D;
+  }
 })(typeof self !== 'undefined' ? self : this);

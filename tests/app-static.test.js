@@ -77,4 +77,58 @@ module.exports = (t) => {
     const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
     assert.ok(/cubeGroup\.add\(this\.pivot\)/.test(c3), 'pivot 必须挂在 cubeGroup 下（视角旋转修复）');
   });
+
+  t('视角旋转使用屏幕空间四元数轨道（不再用欧拉角累加）', () => {
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/function orbitQuat/.test(c3), '缺少 orbitQuat 纯函数');
+    assert.ok(/this\.orientation/.test(c3), '应使用姿态四元数 orientation');
+    assert.ok(/orbitQuat\(this\.orientation/.test(c3), '_applyOrbit 应基于 orientation 计算');
+    assert.ok(!/cubeGroup\.rotation\.[xy] \+=/.test(c3), '不得再对 cubeGroup 欧拉角做增量累加');
+  });
+
+  t('视角按钮完整（左/右/上/下/复位）且已接线', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.ok(/id="viewPad"/.test(html), '缺少视角按钮容器 viewPad');
+    ['left', 'right', 'up', 'down', 'reset'].forEach(d => {
+      assert.ok(new RegExp('data-view-rot="' + d + '"').test(html), '缺少视角按钮 ' + d);
+    });
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/getElementById\('viewPad'\)/.test(app), 'app.js 应绑定视角按钮');
+    assert.ok(/orbitView/.test(app), 'app.js 应调用 orbitView');
+    assert.ok(/resetView/.test(app), 'app.js 应调用 resetView');
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/Cube3D\.prototype\.orbitView/.test(c3), 'cube3d 缺少 orbitView');
+    assert.ok(/Cube3D\.prototype\.resetView/.test(c3), 'cube3d 缺少 resetView');
+    assert.ok(/this\.resetView\(\)/.test(c3), '切换阶数时应复位视角');
+  });
+
+  t('计时器：计时中无法换打乱（newScramble 状态守卫）', () => {
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    const seg = app.slice(app.indexOf('function newScramble'), app.indexOf('function renderTimer'));
+    assert.ok(/timer\.state === 'running'/.test(seg), 'newScramble 应拒绝 running 状态');
+    assert.ok(/timer\.state === 'holding'/.test(seg), 'newScramble 应拒绝 holding 状态');
+    const guardAt = seg.indexOf("if (timer.state === 'running'");
+    const resetAt = seg.indexOf('timer.scramble = Cube.scramble');
+    assert.ok(guardAt >= 0 && guardAt < resetAt, '守卫必须直接返回，且在改写计时状态之前');
+  });
+
+  t('计时器：放弃按钮无条件停表（修复"按下新打乱后无法放弃"）', () => {
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    const seg = app.slice(
+      app.indexOf("getElementById('btnGiveUp')"),
+      app.indexOf("getElementById('btnSaveResult')")
+    );
+    assert.ok(/clearInterval\(timerTick\)/.test(seg), '放弃时应清理计时间隔');
+    assert.ok(!/if \(timer\.state === 'running'\)\s*\{\s*clearInterval/.test(seg),
+      '清理间隔不应再依赖 running 状态（状态错乱时会停不下来）');
+  });
+
+  t('计时器：按钮可用态跟随状态（预热/计时中禁用新打乱）', () => {
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    const seg = app.slice(app.indexOf('function renderTimer'), app.indexOf('function timerHoldStart'));
+    assert.ok(/btnNewScramble'\)\.disabled/.test(seg), 'renderTimer 应管理新打乱按钮可用态');
+    assert.ok(/btnGiveUp'\)\.disabled/.test(seg), 'renderTimer 应管理放弃按钮可用态');
+    assert.ok(/timer\.state === 'running' \|\| timer\.state === 'holding'/.test(seg),
+      '预热/计时中应禁用新打乱');
+  });
 };

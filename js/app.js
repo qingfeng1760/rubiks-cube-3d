@@ -280,6 +280,20 @@
     cube3d.enqueueMove(move, { user: true });
   });
 
+  // 视角按钮：与拖动旋转同一套屏幕空间逻辑（每次 30°）；复位回到默认视角
+  var VIEW_STEP = Math.PI / 6;
+  var VIEW_ROT = {
+    left: [-VIEW_STEP, 0], right: [VIEW_STEP, 0],
+    up: [0, -VIEW_STEP], down: [0, VIEW_STEP]
+  };
+  document.getElementById('viewPad').addEventListener('click', function (e) {
+    var dir = e.target.dataset && e.target.dataset.viewRot;
+    if (!dir || !cube3d) return;
+    if (dir === 'reset') { cube3d.resetView(); return; }
+    var r = VIEW_ROT[dir];
+    if (r) cube3d.orbitView(r[0], r[1]);
+  });
+
   /* ---------------- 速拧计时器 ---------------- */
   var timer = { state: 'idle', scramble: null, holdStart: 0, startAt: 0, result: null };
   var HOLD_MS = 300; // 防误触：按住不足 300ms 不开表
@@ -291,6 +305,7 @@
     renderTimer();
   }
   function newScramble() {
+    if (timer.state === 'running' || timer.state === 'holding') return; // 计时中/预热中不打断本把
     timer.scramble = Cube.scramble(3); // 计时器固定 3 阶标准打乱
     timer.state = 'idle';
     timer.result = null;
@@ -302,6 +317,11 @@
     var d = document.getElementById('timerDisplay');
     var hint = document.getElementById('timerHint');
     d.className = '';
+    // 按钮可用态：预热/计时中不能换打乱；待机时没有可放弃的表
+    document.getElementById('btnNewScramble').disabled =
+      (timer.state === 'running' || timer.state === 'holding');
+    document.getElementById('btnGiveUp').disabled =
+      (timer.state === 'idle' || timer.state === 'holding');
     if (timer.state === 'idle') {
       d.textContent = '0.00';
       hint.textContent = '按住空格预热，松手开始计时；计时中按空格停止';
@@ -374,7 +394,8 @@
 
   document.getElementById('btnNewScramble').addEventListener('click', newScramble);
   document.getElementById('btnGiveUp').addEventListener('click', function () {
-    if (timer.state === 'running') { clearInterval(timerTick); }
+    clearInterval(timerTick); // 无条件清间隔：即使状态异常也能停表
+    timerTick = null;
     timer.state = 'idle'; timer.result = null;
     document.getElementById('resultPanel').classList.remove('show');
     renderTimer();

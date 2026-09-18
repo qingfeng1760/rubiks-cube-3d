@@ -7,6 +7,9 @@ desktop.ini
 .vscode/
 .idea/
 
+# 工具产物
+.zcode/
+
 # 本地备份/临时文件
 *.tmp
 *.bak
