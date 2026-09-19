@@ -175,6 +175,7 @@ module.exports = (t) => {
     assert.ok(/Cube\.invertMove/.test(app), 'app.js 应调用 invertMove');
     assert.ok(/play\.history\.pop\(\)/.test(app), '撤销应弹出历史栈');
     assert.ok(/function onUserMove\(moveStr, isUndo\)/.test(app), 'onUserMove 应区分撤销');
+    assert.ok(/isUndo \? inv : moveStr/.test(app) === false, '禁止双重取逆：onUserMove 应原样应用动画动作');
     assert.ok(/undo: true/.test(app), '撤销动画应带 undo 标记');
     assert.ok(/e\.key !== 'z'/.test(app), '应支持 Ctrl+Z 触发撤销');
     const hudSeg = app.slice(app.indexOf('function updatePlayHud'), app.indexOf('function ensureCube3d'));

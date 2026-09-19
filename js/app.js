@@ -218,8 +218,9 @@
   }
 
   function onUserMove(moveStr, isUndo) {
-    var inv = Cube.invertMove(moveStr);
-    play.facelets = Cube.applyMove(play.facelets, isUndo ? inv : moveStr);
+    // moveStr 即动画实际转的动作（撤销时 undoOne 已先取逆入队），此处一律原样应用，
+    // 不得再对 moveStr 取逆（会双重取逆导致逻辑态与动画分叉）
+    play.facelets = Cube.applyMove(play.facelets, moveStr);
     if (isUndo) {
       play.history.pop();
     } else {
