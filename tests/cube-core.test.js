@@ -99,6 +99,26 @@ module.exports = (t) => {
     assert.ok(Cube.isSolved(applySeq(inv, applySeq(sc.moves))));
   });
 
+  t('invertMove：取逆动作（R↔R\'、R2 自逆、层深不变）', () => {
+    assert.strictEqual(Cube.invertMove('R'), "R'");
+    assert.strictEqual(Cube.invertMove("R'"), 'R');
+    assert.strictEqual(Cube.invertMove('R2'), 'R2');
+    assert.strictEqual(Cube.invertMove('2R'), "2R'");
+    assert.strictEqual(Cube.invertMove("2R'"), '2R');
+    assert.strictEqual(Cube.invertMove("U'"), 'U');
+    assert.throws(() => Cube.invertMove('X'));
+    assert.throws(() => Cube.invertMove('RR'));
+    // 性质：任意序列逆序取逆后回到还原（3 阶与 4 阶内层）
+    for (let k = 0; k < 20; k++) {
+      const sc = Cube.scramble(3);
+      const inv = sc.moves.slice().reverse().map(mv => Cube.invertMove(mv));
+      assert.ok(Cube.isSolved(applySeq(inv, applySeq(sc.moves))), '逆序取逆应还原: ' + sc.text);
+    }
+    const seq4 = Cube.scramble(4).moves;
+    const inv4 = seq4.slice().reverse().map(mv => Cube.invertMove(mv));
+    assert.ok(Cube.isSolved(applySeq(inv4, applySeq(seq4))), '4 阶内层逆序取逆应还原');
+  });
+
   t('moveInfo 解析轴/层/圈数（N=3 坐标：外层 ±2，中层 0）', () => {
     const info = mv => Cube.moveInfo(mv, 3);
     assert.deepStrictEqual(

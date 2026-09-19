@@ -101,6 +101,13 @@
     return { face: m[2], depth: depth, suffix: m[3] || '' };
   }
 
+  /* 取逆动作：X ↔ X'，X2 自逆，层深不变（撤销用） */
+  function invertMove(move) {
+    var p = parseMove(move, 6);
+    var inv = p.suffix === '2' ? '2' : p.suffix === "'" ? '' : "'";
+    return (p.depth > 1 ? p.depth : '') + p.face + inv;
+  }
+
   /* 应用动作；阶数由 facelets 长度推导 */
   function applyMove(facelets, move) {
     var N = orderOf(facelets);
@@ -186,6 +193,7 @@
     moveInfo: moveInfo,
     dragToMove: dragToMove,
     parseMove: parseMove,
+    invertMove: invertMove,
     DEFS: defsFor(3),
     faceletIndexMap: indexMap
   };

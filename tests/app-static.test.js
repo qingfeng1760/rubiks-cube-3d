@@ -163,4 +163,31 @@ module.exports = (t) => {
     const dl = fs.readFileSync(path.join(root, 'js', 'data-layer.js'), 'utf8');
     assert.ok(/skin: 'classic'/.test(dl), '设置默认值应含 skin: classic');
   });
+
+  t('撤销一步：invertMove + 历史栈 + 基线切换清空历史', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.ok(/id="btnUndo"/.test(html), '缺少撤销按钮');
+    const core = fs.readFileSync(path.join(root, 'js', 'cube-core.js'), 'utf8');
+    assert.ok(/function invertMove/.test(core), 'cube-core 缺少 invertMove');
+    assert.ok(/invertMove: invertMove/.test(core), 'invertMove 应导出');
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/Cube\.invertMove/.test(app), 'app.js 应调用 invertMove');
+    assert.ok(/play\.history\.pop\(\)/.test(app), '撤销应弹出历史栈');
+    assert.ok(/function onUserMove\(moveStr, isUndo\)/.test(app), 'onUserMove 应区分撤销');
+    assert.ok(/undo: true/.test(app), '撤销动画应带 undo 标记');
+    assert.ok(/e\.key !== 'z'/.test(app), '应支持 Ctrl+Z 触发撤销');
+    const hudSeg = app.slice(app.indexOf('function updatePlayHud'), app.indexOf('function ensureCube3d'));
+    assert.ok(/btnUndo'\)\.disabled/.test(hudSeg), 'updatePlayHud 应管理撤销按钮可用态');
+    // 打乱在原对象上清空历史；复原/换阶/花样/清库走新对象字面量
+    const scrambleSeg = app.slice(app.indexOf("getElementById('btnScramble')"), app.indexOf("getElementById('btnResetCube')"));
+    assert.ok(/history = \[\]/.test(scrambleSeg), '打乱应清空撤销历史');
+    // 复原/换阶/花样/清库走新对象字面量（全文件共 5 处：enterPlay 兜底、换阶、复原、花样、清库）
+    const count = (app.match(/history: \[\]/g) || []).length;
+    assert.ok(count >= 4, '复原/换阶/花样/清库都应重置历史，实测 ' + count + ' 处');
+    assert.ok(/history: play\.history/.test(app), '存档应包含历史');
+    assert.ok(/Array\.isArray\(saved\.history\)/.test(app), '恢复历史应做类型校验');
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/undo: !!\(opts && opts\.undo\)/.test(c3), 'enqueueMove 应透传 undo 标记');
+    assert.ok(/onUserMove\(t\.move, !!t\.undo\)/.test(c3), '_endTurn 应把 undo 传给回调');
+  });
 };

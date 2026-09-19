@@ -130,7 +130,8 @@
 
   /* ---------------- 三阶玩法（支持 2~5 阶） ---------------- */
   var cube3d = null;
-  var play = { order: 3, facelets: Cube.SOLVED, moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
+  var play = { order: 3, facelets: Cube.SOLVED, moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false, history: [] };
+  var HISTORY_MAX = 200; // 撤销历史上限：足够长，且存档体积可控
   var playTick = null;
 
   function playElapsed() {
@@ -143,6 +144,7 @@
       order: play.order,
       facelets: play.facelets, moves: play.moves,
       elapsedMs: Math.round(play.elapsedBase), scrambled: play.scrambled,
+      history: play.history,
       savedAt: new Date().toISOString()
     });
   }
@@ -155,6 +157,7 @@
     document.getElementById('playMoves').textContent = play.moves;
     document.getElementById('playTime').textContent = (playElapsed() / 1000).toFixed(1) + 's';
     document.getElementById('btnSoundQuick').textContent = dl.getSettings().sound ? '🔊 音效' : '🔇 音效';
+    document.getElementById('btnUndo').disabled = !play.history.length;
   }
 
   function ensureCube3d() {
@@ -196,11 +199,12 @@
         moves: saved.moves || 0,
         elapsedBase: saved.elapsedMs || 0,
         runningSince: 0,
-        scrambled: !!saved.scrambled && !Cube.isSolved(saved.facelets)
+        scrambled: !!saved.scrambled && !Cube.isSolved(saved.facelets),
+        history: Array.isArray(saved.history) ? saved.history : []
       };
       play.runningSince = play.scrambled ? Date.now() : 0;
     } else {
-      play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
+      play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false, history: [] };
     }
     document.getElementById('orderSelect').value = String(play.order);
     refreshPatternMenu();
@@ -213,9 +217,16 @@
     playTick = setInterval(updatePlayHud, 500);
   }
 
-  function onUserMove(moveStr) {
-    play.facelets = Cube.applyMove(play.facelets, moveStr);
-    play.moves += 1;
+  function onUserMove(moveStr, isUndo) {
+    var inv = Cube.invertMove(moveStr);
+    play.facelets = Cube.applyMove(play.facelets, isUndo ? inv : moveStr);
+    if (isUndo) {
+      play.history.pop();
+    } else {
+      play.history.push(moveStr);
+      if (play.history.length > HISTORY_MAX) play.history.shift();
+    }
+    play.moves = play.history.length;
     if (play.scrambled) startPlayTimer();
     cube3d.setFacelets(play.facelets);
     sndMove();
@@ -229,13 +240,25 @@
     }
   }
 
+  // 撤销一步：弹出上一动作并播放其逆动作（undo 通道）
+  function undoOne() {
+    if (!play.history.length || !cube3d || cube3d.isBusy()) return;
+    cube3d.enqueueMove(Cube.invertMove(play.history[play.history.length - 1]), { user: true, undo: true });
+  }
+  document.getElementById('btnUndo').addEventListener('click', undoOne);
+  document.addEventListener('keydown', function (e) {
+    if (currentView !== 'play' || !(e.ctrlKey || e.metaKey) || e.key !== 'z') return;
+    e.preventDefault();
+    undoOne();
+  });
+
   // 切换阶数：开一局该阶数的新对局
   document.getElementById('orderSelect').addEventListener('change', function () {
     var N = parseInt(this.value, 10);
     if (!cube3d || cube3d.isBusy()) { // 动画中先回到该阶还原态
       toast('请等待当前动画结束');
     }
-    play = { order: N, facelets: Cube.solvedState(N), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
+    play = { order: N, facelets: Cube.solvedState(N), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false, history: [] };
     if (ensureCube3d()) cube3d.setOrder(N);
     updatePlayHud();
     savePlay();
@@ -251,6 +274,7 @@
     play.elapsedBase = 0;
     play.scrambled = true;
     play.runningSince = 0;
+    play.history = []; // 打乱是新基线，不允许撤回打乱前
     cube3d.setFacelets(play.facelets);
     cube3d.setAnimSpeed(dl.getSettings().animSpeed);
     sc.moves.forEach(function (m) { cube3d.enqueueMove(m, { silent: true }); });
@@ -261,7 +285,7 @@
 
   document.getElementById('btnResetCube').addEventListener('click', function () {
     if (cube3d && cube3d.isBusy()) return;
-    play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
+    play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false, history: [] };
     if (cube3d) cube3d.setFacelets(play.facelets);
     stopPlayTimer();
     updatePlayHud();
@@ -323,7 +347,7 @@
     var id = document.getElementById('patternSelect').value;
     var moves = id ? Patterns.build(id, play.order) : null;
     if (!moves || !ensureCube3d() || cube3d.isBusy()) return;
-    play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: true };
+    play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: true, history: [] };
     moves.forEach(function (m) { play.facelets = Cube.applyMove(play.facelets, m); });
     cube3d.setFacelets(play.facelets);
     cube3d.setAnimSpeed(dl.getSettings().animSpeed);
@@ -634,7 +658,7 @@
     clearAllArmed = false;
     btn.textContent = '清空全部';
     dl.clearAll();
-    play = { order: 3, facelets: Cube.solvedState(3), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
+    play = { order: 3, facelets: Cube.solvedState(3), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false, history: [] };
     if (cube3d) cube3d.setFacelets(play.facelets);
     timer.scramble = null;
     toast('已清空全部数据');

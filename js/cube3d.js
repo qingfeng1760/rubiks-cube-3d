@@ -222,7 +222,8 @@
   };
 
   /* ---- 转层队列 ---- */
-  // moveStr 如 "R'"、"2R"；opts.silent 时不回调 onTurnDone，opts.user 走 onUserMove
+  // moveStr 如 "R'"、"2R"；opts.silent 时不回调 onTurnDone，opts.user 走 onUserMove，
+  // opts.undo 标记撤销动画（同样走 onUserMove，第二参数 true）
   Cube3D.prototype.enqueueMove = function (moveStr, opts) {
     var info = CubeCore.moveInfo(moveStr, this.N);
     this.turnQueue.push({
@@ -230,7 +231,8 @@
       dir: info.turns === 3 ? -1 : 1,              // 3 个顺时针 = 1 个逆时针
       angle: info.turns === 2 ? Math.PI : Math.PI / 2,
       move: moveStr, silent: !!(opts && opts.silent),
-      user: !!(opts && opts.user)
+      user: !!(opts && opts.user),
+      undo: !!(opts && opts.undo)
     });
   };
 
@@ -265,7 +267,7 @@
     this.pivot.rotation.set(0, 0, 0);
     this.turning = null;
     if (t.user) {
-      this.onUserMove(t.move);   // 用户操作（拖拽/按钮）的动作：由应用写入逻辑状态
+      this.onUserMove(t.move, !!t.undo);   // 用户操作（含撤销）：由应用写入逻辑状态
     } else {
       this.onTurnDone(t.move, t.silent); // 打乱等程序动画
     }
