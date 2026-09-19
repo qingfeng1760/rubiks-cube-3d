@@ -87,6 +87,50 @@
     giveBtn.click(); await sleep(220);               // 放弃：应立即停表
     R['「放弃」立即停表'] = display() === '0.00' && hint().indexOf('按住空格') === 0;
 
+    // 批次一：图案花样 / 皮肤 / 撤销 / 键盘转层
+    document.querySelector('#mainNav button[data-view="play"]').click();
+    await sleep(120);
+    pumpUntilIdle(c3, 200);
+    document.getElementById('btnResetCube').click();
+    pumpUntilIdle(c3, 100);
+    R['撤销按钮：空历史时禁用'] = document.getElementById('btnUndo').disabled === true;
+
+    // 键盘转层（合成 keydown；先移除焦点，避免落在输入控件上）
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true }));
+    pumpUntilIdle(c3, 100);
+    R['键盘转层生效'] = parseInt(document.getElementById('playMoves').textContent, 10) === 1;
+    R['撤销按钮：有历史后可用'] = document.getElementById('btnUndo').disabled === false;
+    document.getElementById('btnUndo').click();
+    pumpUntilIdle(c3, 100);
+    R['撤销使步数回退且复原'] = parseInt(document.getElementById('playMoves').textContent, 10) === 0
+      && window.CubeCore.isSolved(c3.facelets);
+
+    // 图案花样：3 阶应四种；生成棋盘格后未还原、历史清空、可复原
+    const patSel = document.getElementById('patternSelect');
+    R['花样菜单：3 阶有四种'] = patSel.options.length === 4;
+    patSel.value = 'checker';
+    document.getElementById('btnPattern').click();
+    pumpUntilIdle(c3, 400);
+    R['生成花样完成且未还原'] = !c3.isBusy() && !window.CubeCore.isSolved(c3.facelets)
+      && document.getElementById('playStatus').textContent.indexOf('已生成') === 0;
+    R['花样为打乱基线：撤销已清空'] = document.getElementById('btnUndo').disabled === true;
+    document.getElementById('btnResetCube').click();
+    pumpUntilIdle(c3, 100);
+    R['花样可复原'] = window.CubeCore.isSolved(c3.facelets);
+
+    // 皮肤：四套可选、切换即时生效并写入设置、可切回
+    const skinSel = document.getElementById('setSkin');
+    R['皮肤选择器有四套'] = skinSel.options.length === 4;
+    const uBefore = c3.colors.U;
+    skinSel.value = 'neon';
+    skinSel.dispatchEvent(new Event('change'));
+    R['皮肤切换即时生效'] = c3.colors.U !== uBefore;
+    R['皮肤已写入设置'] = JSON.parse(window.localStorage.getItem('rubik.settings.v1')).skin === 'neon';
+    skinSel.value = 'classic';
+    skinSel.dispatchEvent(new Event('change'));
+    R['皮肤可切回经典'] = c3.colors.U === uBefore;
+
     // localStorage 读写往返（数据层键，读完恢复原值）
     const KEY = 'rubik.settings.v1';
     const before = window.localStorage.getItem(KEY);

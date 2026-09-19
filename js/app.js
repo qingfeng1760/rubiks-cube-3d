@@ -247,7 +247,7 @@
     cube3d.enqueueMove(Cube.invertMove(play.history[play.history.length - 1]), { user: true, undo: true });
   }
   document.getElementById('btnUndo').addEventListener('click', undoOne);
-  document.addEventListener('keydown', function (e) {
+  window.addEventListener('keydown', function (e) {
     if (currentView !== 'play' || !(e.ctrlKey || e.metaKey) || e.key !== 'z') return;
     e.preventDefault();
     undoOne();
@@ -361,7 +361,7 @@
   /* ---------------- 键盘转层 ---------------- */
   // 仅玩法视图生效：字母键 R/L/U/D/F/B 转层，Shift 取逆；输入控件聚焦与
   // Ctrl/Meta/Alt 组合键不触发（组合键留给撤销等），动画队列中不触发
-  document.addEventListener('keydown', function (e) {
+  window.addEventListener('keydown', function (e) {
     if (currentView !== 'play') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName)) return;
