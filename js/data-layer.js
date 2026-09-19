@@ -13,7 +13,7 @@
   };
 
   function defaultSettings() {
-    return { sound: true, animSpeed: 1, sensitivity: 1 };
+    return { sound: true, animSpeed: 1, sensitivity: 1, skin: 'classic' };
   }
 
   function defaultData() {

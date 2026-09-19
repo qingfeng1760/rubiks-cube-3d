@@ -212,6 +212,10 @@
         <div class="info"><h4>拖动灵敏度</h4><p>数值越大，越轻的拖动就能触发转层</p></div>
         <input type="range" id="setSensitivity" min="0.5" max="2" step="0.25">
       </div>
+      <div class="setting-row">
+        <div class="info"><h4>魔方皮肤</h4><p>更换六面配色（经典 / 马卡龙 / 霓虹 / 莫兰迪）</p></div>
+        <select id="setSkin" class="order-select"></select>
+      </div>
     </div>
     <div class="glass">
       <div class="setting-row">
@@ -240,6 +244,7 @@
 <script src="js/cube-core.js"></script>
 <script src="js/pattern-core.js"></script>
 <script src="js/stats-core.js"></script>
+<script src="js/skins.js"></script>
 <!-- 3D 引擎：本地内置（离线可用）；加载失败时提示重试 -->
 <script src="js/vendor/three.min.js" onerror="window.__threeFailed=true"></script>
 <script src="js/cube3d.js"></script>

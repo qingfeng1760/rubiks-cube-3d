@@ -174,6 +174,7 @@
       });
       window.__cube3d = cube3d; // 调试/测试用句柄
       cube3d.setSensitivity(dl.getSettings().sensitivity);
+      cube3d.setColors(Skins.get(dl.getSettings().skin).colors);
       cube3d.setFacelets(play.facelets);
     } catch (e) {
       document.getElementById('threeError').style.display = 'block';
@@ -550,6 +551,7 @@
     document.getElementById('setSound').checked = !!s.sound;
     document.getElementById('setAnimSpeed').value = s.animSpeed;
     document.getElementById('setSensitivity').value = s.sensitivity;
+    document.getElementById('setSkin').value = s.skin || 'classic';
     var recs = dl.getRecords();
     document.getElementById('dataMeta').textContent =
       '本地数据：' + recs.length + ' 条成绩 · 数据结构 v' + DataLayer.SCHEMA_VERSION;
@@ -567,6 +569,22 @@
     dl.updateSettings({ sensitivity: parseFloat(this.value) });
     if (cube3d) cube3d.setSensitivity(parseFloat(this.value));
   });
+
+  // 皮肤选择：填充选项并即时换色
+  (function initSkinSelect() {
+    var sel = document.getElementById('setSkin');
+    Skins.list().forEach(function (s) {
+      var o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () {
+      dl.updateSettings({ skin: this.value });
+      if (cube3d) cube3d.setColors(Skins.get(this.value).colors);
+      toast('皮肤已切换：' + Skins.get(this.value).name);
+    });
+  })();
 
   document.getElementById('btnExport').addEventListener('click', function () {
     var text = dl.exportData();

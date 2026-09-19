@@ -8,7 +8,8 @@ const root = path.join(__dirname, '..');
 module.exports = (t) => {
   t('所有资源文件存在', () => {
     ['index.html', 'css/style.css', 'js/data-layer.js', 'js/cube-core.js',
-     'js/pattern-core.js', 'js/stats-core.js', 'js/cube3d.js', 'js/app.js'].forEach(f =>
+     'js/pattern-core.js', 'js/stats-core.js', 'js/skins.js',
+     'js/cube3d.js', 'js/app.js'].forEach(f =>
       assert(fs.existsSync(path.join(root, f)), '缺少 ' + f));
   });
 
@@ -27,7 +28,7 @@ module.exports = (t) => {
 
   t('index.html 按正确顺序加载全部脚本', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const order = ['js/data-layer.js', 'js/cube-core.js', 'js/pattern-core.js', 'js/stats-core.js', 'js/cube3d.js', 'js/app.js'];
+    const order = ['js/data-layer.js', 'js/cube-core.js', 'js/pattern-core.js', 'js/stats-core.js', 'js/skins.js', 'js/cube3d.js', 'js/app.js'];
     let last = -1;
     order.forEach(f => {
       const i = html.indexOf(f);
@@ -146,5 +147,20 @@ module.exports = (t) => {
     assert.ok(/isBusy\(\)/.test(genSeg), '动画中不应生成花样');
     const core = fs.readFileSync(path.join(root, 'js', 'pattern-core.js'), 'utf8');
     assert.ok(/cube-in-cube/.test(core), 'pattern-core 应含立方体套立方体');
+  });
+
+  t('外观皮肤：设置页选择器与换色接线', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.ok(/id="setSkin"/.test(html), '设置页缺少皮肤选择器');
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/Skins\.list/.test(app), 'app.js 应用 Skins.list 填充选择器');
+    assert.ok(/Skins\.get/.test(app), 'app.js 应从 skins 模块取配色');
+    assert.ok(/updateSettings\(\{ skin:/.test(app), '皮肤选择应写入设置');
+    assert.ok(/setColors/.test(app), 'app.js 应调用 cube3d.setColors 换色');
+    const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
+    assert.ok(/Cube3D\.prototype\.setColors/.test(c3), 'cube3d 缺少 setColors');
+    assert.ok(/this\.colors\[/.test(c3), '贴纸着色应走实例 colors（可换肤）');
+    const dl = fs.readFileSync(path.join(root, 'js', 'data-layer.js'), 'utf8');
+    assert.ok(/skin: 'classic'/.test(dl), '设置默认值应含 skin: classic');
   });
 };

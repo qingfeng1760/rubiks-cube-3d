@@ -51,6 +51,7 @@
     this.onUserMove = opts.onUserMove || function () {};   // 用户操作（拖拽/按钮）回调
     this.onTurnDone = opts.onTurnDone || function () {};   // 程序动画（打乱等）回调
     this.animSpeed = opts.animSpeed || 1;
+    this.colors = COLORS; // 六面配色（setColors 换肤，默认经典）
 
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -215,7 +216,7 @@
         var normal = [0, 0, 0]; normal[axisIdx] = sign;
         var idx = self.idxMap[g.join(',') + '|' + normal.join(',')];
         if (idx === undefined) { c.material[s].color.setHex(INNER); continue; }
-        c.material[s].color.setHex(COLORS[f[idx]] || INNER);
+        c.material[s].color.setHex(this.colors[f[idx]] || INNER);
       }
     });
   };
@@ -373,6 +374,12 @@
   /* 应用设置 */
   Cube3D.prototype.setAnimSpeed = function (v) { this.animSpeed = v || 1; };
   Cube3D.prototype.setSensitivity = function (v) { this.dragSensitivity = v || 1; };
+  /* 换肤：传入 skins 模块的六面色表，立即重绘贴纸 */
+  Cube3D.prototype.setColors = function (colors) {
+    if (!colors || typeof colors !== 'object') return;
+    this.colors = colors;
+    if (this.cubies && this.cubies.length) this._rebuildMaterials();
+  };
 
   /* UMD：浏览器挂 window.Cube3D，Node 导出构造器与纯函数供测试 */
   Cube3D.orbitQuat = orbitQuat;

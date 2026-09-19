@@ -23,7 +23,7 @@ module.exports = (t) => {
     const dl = new DataLayer(mockStorage());
     assert.strictEqual(dl.getCubeState(), null);
     assert.deepStrictEqual(dl.getRecords(), []);
-    assert.deepStrictEqual(dl.getSettings(), { sound: true, animSpeed: 1, sensitivity: 1 });
+    assert.deepStrictEqual(dl.getSettings(), { sound: true, animSpeed: 1, sensitivity: 1, skin: 'classic' });
   });
 
   t('保存/读取/清除魔方进度（持久化语义：同 storage 实例可复读）', () => {
@@ -74,7 +74,7 @@ module.exports = (t) => {
   t('设置：updateSettings 部分更新，未知键被忽略', () => {
     const dl = new DataLayer(mockStorage());
     dl.updateSettings({ sound: false, hack: 'x' });
-    assert.deepStrictEqual(dl.getSettings(), { sound: false, animSpeed: 1, sensitivity: 1 });
+    assert.deepStrictEqual(dl.getSettings(), { sound: false, animSpeed: 1, sensitivity: 1, skin: 'classic' });
     dl.updateSettings({ animSpeed: 0.5 });
     assert.strictEqual(dl.getSettings().animSpeed, 0.5);
     assert.strictEqual(dl.getSettings().sound, false); // 未覆盖的键保留
@@ -108,14 +108,14 @@ module.exports = (t) => {
     dl.clearAll();
     assert.strictEqual(dl.getCubeState(), null);
     assert.deepStrictEqual(dl.getRecords(), []);
-    assert.deepStrictEqual(dl.getSettings(), { sound: true, animSpeed: 1, sensitivity: 1 });
+    assert.deepStrictEqual(dl.getSettings(), { sound: true, animSpeed: 1, sensitivity: 1, skin: 'classic' });
 
     dl.importData(backup);
     assert.deepStrictEqual(dl.getCubeState(), { facelets: 'X', moves: 7, elapsedMs: 999, scrambled: true });
     assert.strictEqual(dl.getRecords().length, 1);
     assert.strictEqual(dl.getRecords()[0].timeMs, 15500);
     assert.strictEqual(dl.getPractice('2026-09-18'), 1);
-    assert.deepStrictEqual(dl.getSettings(), { sound: false, animSpeed: 0.6, sensitivity: 1 });
+    assert.deepStrictEqual(dl.getSettings(), { sound: false, animSpeed: 0.6, sensitivity: 1, skin: 'classic' });
   });
 
   t('A16 导入非法文件报错且不破坏现有数据', () => {
@@ -143,5 +143,24 @@ module.exports = (t) => {
     storage.setItem('rubik.records.v1', '{broken json');
     const dl = new DataLayer(storage);
     assert.deepStrictEqual(dl.getRecords(), []);
+  });
+
+  t('皮肤设置：默认 classic，可更新持久化，旧数据缺省回退，导出导入往返', () => {
+    const storage = mockStorage();
+    const dl = new DataLayer(storage);
+    assert.strictEqual(dl.getSettings().skin, 'classic');
+    dl.updateSettings({ skin: 'neon' });
+    assert.strictEqual(new DataLayer(storage).getSettings().skin, 'neon');
+    // 一期旧数据（无 skin 字段）→ 回退默认，不崩溃
+    storage.setItem('rubik.settings.v1', JSON.stringify({ sound: true, animSpeed: 1, sensitivity: 1 }));
+    assert.strictEqual(new DataLayer(storage).getSettings().skin, 'classic');
+    // 导出 → 清空 → 导入：皮肤随数据恢复
+    const storage2 = mockStorage();
+    const dl2 = new DataLayer(storage2);
+    dl2.updateSettings({ skin: 'morandi' });
+    const backup = dl2.exportData();
+    dl2.clearAll();
+    dl2.importData(backup);
+    assert.strictEqual(dl2.getSettings().skin, 'morandi');
   });
 };
