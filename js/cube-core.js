@@ -108,6 +108,13 @@
     return (p.depth > 1 ? p.depth : '') + p.face + inv;
   }
 
+  /* 字母键 → 动作名：R/L/U/D/F/B，Shift 取逆；非单字母或非面键返回 null */
+  function keyToMove(key, shift) {
+    var ch = String(key || '').toUpperCase();
+    if (ch.length !== 1 || 'URFDLB'.indexOf(ch) === -1) return null;
+    return ch + (shift ? "'" : '');
+  }
+
   /* 应用动作；阶数由 facelets 长度推导 */
   function applyMove(facelets, move) {
     var N = orderOf(facelets);
@@ -194,6 +201,7 @@
     dragToMove: dragToMove,
     parseMove: parseMove,
     invertMove: invertMove,
+    keyToMove: keyToMove,
     DEFS: defsFor(3),
     faceletIndexMap: indexMap
   };

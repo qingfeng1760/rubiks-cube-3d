@@ -190,4 +190,22 @@ module.exports = (t) => {
     assert.ok(/undo: !!\(opts && opts\.undo\)/.test(c3), 'enqueueMove 应透传 undo 标记');
     assert.ok(/onUserMove\(t\.move, !!t\.undo\)/.test(c3), '_endTurn 应把 undo 传给回调');
   });
+
+  t('键盘转层：仅玩法页生效，输入控件焦点不误触，动画与组合键不触发', () => {
+    const core = fs.readFileSync(path.join(root, 'js', 'cube-core.js'), 'utf8');
+    assert.ok(/function keyToMove/.test(core), 'cube-core 缺少 keyToMove');
+    assert.ok(/keyToMove: keyToMove/.test(core), 'keyToMove 应导出');
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/Cube\.keyToMove/.test(app), 'app.js 应使用 keyToMove 做键映射');
+    const seg = app.slice(
+      app.indexOf('/* ---------------- 键盘转层'),
+      app.indexOf('/* ---------------- 速拧计时器')
+    );
+    assert.ok(/addEventListener\('keydown'/.test(seg), '应有玩法页键盘监听');
+    assert.ok(/currentView !== 'play'/.test(seg), '监听应限定玩法视图');
+    assert.ok(/INPUT|SELECT|TEXTAREA/.test(seg), '输入控件聚焦时不应触发转层');
+    assert.ok(/isBusy\(\)/.test(seg), '动画中不应触发键盘转层');
+    assert.ok(/e\.ctrlKey \|\| e\.metaKey \|\| e\.altKey/.test(seg), '组合键（Ctrl/Meta/Alt）不应触发转层，避免与撤销冲突');
+    assert.ok(/user: true/.test(seg), '键盘转层应走用户动作通道（计步/存档/音效一致）');
+  });
 };

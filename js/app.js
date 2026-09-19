@@ -357,6 +357,19 @@
     document.getElementById('playStatus').textContent = '已生成「' + Patterns.get(id).name + '」，复原它吧！';
   });
 
+  /* ---------------- 键盘转层 ---------------- */
+  // 仅玩法视图生效：字母键 R/L/U/D/F/B 转层，Shift 取逆；输入控件聚焦与
+  // Ctrl/Meta/Alt 组合键不触发（组合键留给撤销等），动画队列中不触发
+  document.addEventListener('keydown', function (e) {
+    if (currentView !== 'play') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName)) return;
+    var move = Cube.keyToMove(e.key, e.shiftKey);
+    if (!move || !cube3d || cube3d.isBusy()) return;
+    e.preventDefault();
+    cube3d.enqueueMove(move, { user: true });
+  });
+
   /* ---------------- 速拧计时器 ---------------- */
   var timer = { state: 'idle', scramble: null, holdStart: 0, startAt: 0, result: null };
   var HOLD_MS = 300; // 防误触：按住不足 300ms 不开表

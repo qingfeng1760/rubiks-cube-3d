@@ -119,6 +119,18 @@ module.exports = (t) => {
     assert.ok(Cube.isSolved(applySeq(inv4, applySeq(seq4))), '4 阶内层逆序取逆应还原');
   });
 
+  t('keyToMove：字母键映射转层动作（Shift 取逆）', () => {
+    assert.strictEqual(Cube.keyToMove('r', false), 'R');
+    assert.strictEqual(Cube.keyToMove('r', true), "R'");
+    assert.strictEqual(Cube.keyToMove('R', false), 'R');
+    assert.strictEqual(Cube.keyToMove('R', true), "R'");
+    assert.strictEqual(Cube.keyToMove('u', false), 'U');
+    assert.strictEqual(Cube.keyToMove('x', false), null);
+    assert.strictEqual(Cube.keyToMove('ru', false), null);
+    assert.strictEqual(Cube.keyToMove('', false), null);
+    assert.strictEqual(Cube.keyToMove('5', false), null);
+  });
+
   t('moveInfo 解析轴/层/圈数（N=3 坐标：外层 ±2，中层 0）', () => {
     const info = mv => Cube.moveInfo(mv, 3);
     assert.deepStrictEqual(
