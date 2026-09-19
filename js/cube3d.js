@@ -216,7 +216,7 @@
         var normal = [0, 0, 0]; normal[axisIdx] = sign;
         var idx = self.idxMap[g.join(',') + '|' + normal.join(',')];
         if (idx === undefined) { c.material[s].color.setHex(INNER); continue; }
-        c.material[s].color.setHex(this.colors[f[idx]] || INNER);
+        c.material[s].color.setHex(self.colors[f[idx]] || INNER);
       }
     });
   };

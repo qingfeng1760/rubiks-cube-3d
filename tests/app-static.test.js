@@ -159,7 +159,8 @@ module.exports = (t) => {
     assert.ok(/setColors/.test(app), 'app.js 应调用 cube3d.setColors 换色');
     const c3 = fs.readFileSync(path.join(root, 'js', 'cube3d.js'), 'utf8');
     assert.ok(/Cube3D\.prototype\.setColors/.test(c3), 'cube3d 缺少 setColors');
-    assert.ok(/this\.colors\[/.test(c3), '贴纸着色应走实例 colors（可换肤）');
+    assert.ok(/self\.colors\[/.test(c3), '贴纸着色应走实例配色（可换肤，注意 forEach 回调内用 self）');
+    assert.ok(!/\bthis\.colors\[/.test(c3), '不得在普通函数回调里用 this.colors（this 非实例）');
     const dl = fs.readFileSync(path.join(root, 'js', 'data-layer.js'), 'utf8');
     assert.ok(/skin: 'classic'/.test(dl), '设置默认值应含 skin: classic');
   });
