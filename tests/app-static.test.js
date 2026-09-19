@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 module.exports = (t) => {
   t('所有资源文件存在', () => {
     ['index.html', 'css/style.css', 'js/data-layer.js', 'js/cube-core.js',
-     'js/stats-core.js', 'js/cube3d.js', 'js/app.js'].forEach(f =>
+     'js/pattern-core.js', 'js/stats-core.js', 'js/cube3d.js', 'js/app.js'].forEach(f =>
       assert(fs.existsSync(path.join(root, f)), '缺少 ' + f));
   });
 
@@ -27,7 +27,7 @@ module.exports = (t) => {
 
   t('index.html 按正确顺序加载全部脚本', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const order = ['js/data-layer.js', 'js/cube-core.js', 'js/stats-core.js', 'js/cube3d.js', 'js/app.js'];
+    const order = ['js/data-layer.js', 'js/cube-core.js', 'js/pattern-core.js', 'js/stats-core.js', 'js/cube3d.js', 'js/app.js'];
     let last = -1;
     order.forEach(f => {
       const i = html.indexOf(f);
@@ -130,5 +130,21 @@ module.exports = (t) => {
     assert.ok(/btnGiveUp'\)\.disabled/.test(seg), 'renderTimer 应管理放弃按钮可用态');
     assert.ok(/timer\.state === 'running' \|\| timer\.state === 'holding'/.test(seg),
       '预热/计时中应禁用新打乱');
+  });
+
+  t('图案花样：UI 与接线（菜单按阶过滤，从还原态生成）', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    assert.ok(/id="patternSelect"/.test(html), '缺少花样选择器');
+    assert.ok(/id="btnPattern"/.test(html), '缺少生成花样按钮');
+    const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    assert.ok(/Patterns\.build/.test(app), 'app.js 应通过 pattern-core 生成序列');
+    assert.ok(/refreshPatternMenu/.test(app), 'app.js 应按阶数刷新花样菜单');
+    const menuSeg = app.slice(app.indexOf('function refreshPatternMenu'), app.indexOf("getElementById('btnPattern').addEventListener"));
+    assert.ok(/disabled/.test(menuSeg), '无可用花样时应禁用生成按钮');
+    const genSeg = app.slice(app.indexOf("getElementById('btnPattern')"), app.indexOf('/* ---------------- 速拧计时器'));
+    assert.ok(/scrambled: true/.test(genSeg), '生成花样应视为一次打乱（计时/庆祝语义）');
+    assert.ok(/isBusy\(\)/.test(genSeg), '动画中不应生成花样');
+    const core = fs.readFileSync(path.join(root, 'js', 'pattern-core.js'), 'utf8');
+    assert.ok(/cube-in-cube/.test(core), 'pattern-core 应含立方体套立方体');
   });
 };

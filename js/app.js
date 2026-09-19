@@ -202,6 +202,7 @@
       play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: false };
     }
     document.getElementById('orderSelect').value = String(play.order);
+    refreshPatternMenu();
     if (ensureCube3d()) {
       if (cube3d.N !== play.order) cube3d.setOrder(play.order);
       cube3d.setFacelets(play.facelets);
@@ -237,6 +238,7 @@
     if (ensureCube3d()) cube3d.setOrder(N);
     updatePlayHud();
     savePlay();
+    refreshPatternMenu();
     document.getElementById('playStatus').textContent = N + '×' + N + '×' + N + ' 新对局';
   });
 
@@ -292,6 +294,42 @@
     if (dir === 'reset') { cube3d.resetView(); return; }
     var r = VIEW_ROT[dir];
     if (r) cube3d.orbitView(r[0], r[1]);
+  });
+
+  /* ---------------- 图案花样 ---------------- */
+  function refreshPatternMenu() {
+    var sel = document.getElementById('patternSelect');
+    var items = Patterns.list(play.order);
+    sel.innerHTML = '';
+    if (!items.length) {
+      var none = document.createElement('option');
+      none.value = '';
+      none.textContent = '当前阶数暂无花样';
+      sel.appendChild(none);
+    } else {
+      items.forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.name;
+        sel.appendChild(o);
+      });
+    }
+    document.getElementById('btnPattern').disabled = !items.length;
+  }
+
+  // 生成花样：从还原态按序列生成，等同一次打乱（计时与庆祝语义一致）
+  document.getElementById('btnPattern').addEventListener('click', function () {
+    var id = document.getElementById('patternSelect').value;
+    var moves = id ? Patterns.build(id, play.order) : null;
+    if (!moves || !ensureCube3d() || cube3d.isBusy()) return;
+    play = { order: play.order, facelets: Cube.solvedState(play.order), moves: 0, elapsedBase: 0, runningSince: 0, scrambled: true };
+    moves.forEach(function (m) { play.facelets = Cube.applyMove(play.facelets, m); });
+    cube3d.setFacelets(play.facelets);
+    cube3d.setAnimSpeed(dl.getSettings().animSpeed);
+    moves.forEach(function (m) { cube3d.enqueueMove(m, { silent: true }); });
+    updatePlayHud();
+    savePlay();
+    document.getElementById('playStatus').textContent = '已生成「' + Patterns.get(id).name + '」，复原它吧！';
   });
 
   /* ---------------- 速拧计时器 ---------------- */

@@ -104,6 +104,13 @@
         <button class="btn" id="btnResetCube">复原</button>
         <button class="btn" id="btnSoundQuick">🔊 音效</button>
       </div>
+      <div class="play-hud">
+        <span class="hud-info">花样
+          <select id="patternSelect" class="order-select"></select>
+        </span>
+        <button class="btn" id="btnPattern">生成花样</button>
+        <span class="muted">从还原态生成该图案，等同一次打乱（复原成功有庆祝）</span>
+      </div>
       <div class="turn-pad" id="turnPad">
         <div class="turn-col">
           <span class="muted">转层按钮</span>
@@ -231,6 +238,7 @@
 <!-- 数据层 / 纯逻辑（不依赖 DOM，可被 Node 测试复用） -->
 <script src="js/data-layer.js"></script>
 <script src="js/cube-core.js"></script>
+<script src="js/pattern-core.js"></script>
 <script src="js/stats-core.js"></script>
 <!-- 3D 引擎：本地内置（离线可用）；加载失败时提示重试 -->
 <script src="js/vendor/three.min.js" onerror="window.__threeFailed=true"></script>
